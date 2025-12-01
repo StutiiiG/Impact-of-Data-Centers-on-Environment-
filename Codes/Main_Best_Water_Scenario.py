@@ -2,6 +2,10 @@
 import numpy as np
 import math
 import csv
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent   # /Users/stuti/US-AI-Server-Analysis
+DATA_DIR = ROOT / "Data"
 
 # define scenario numbers
 tem_sce_num=5
@@ -62,8 +66,15 @@ for i in range (tem_sce_num):
         exec('US_Capacity_'+repr(i+1)+'.append(((Maximum_value-Minimum_value)*utilization_level_i+Minimum_value))')
 
 print(US_Capacity_1[0])
+# frozen_data=np.loadtxt (r'\Users\stuti\Downloads\US-AI-Server-Analysis-main-2\Data\Spatial Distribution\WUE_25_spatial.txt',
+#                         delimiter='\t',
+#                         dtype='float')  
 
-frozen_data=np.loadtxt(r'D:\2023 Fall\NS R1 Files\Inputs\Spatial Dirstribution\WUE_25_spatial.txt',delimiter='\t',dtype='float')  
+frozen_data = np.loadtxt(
+    DATA_DIR / "Spatial Distribution" / "WUE_25_spatial.txt",
+    delimiter='\t',
+    dtype='float'
+)
 states = ["Alabama", "Arizona","Arkansas", "California", "Colorado", "Connecticut", "Delaware", "District of Columbia", "Florida", 
           "Georgia", "Idaho","Illinois", "Indiana","Iowa", "Kansas", "Kentucky", "Louisiana","Maine", "Maryland", "Massachusetts", 
           "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", 
@@ -99,10 +110,16 @@ for i in range (tem_sce_num):
     for j in range (spt_sce_num):
         for k in range (typ_sce_num):
             # import unit emission & water data
-            name=r'D:\2023 Fall\NS R1 Files\Inputs\Grid Factor\cases_REadv_'+repr(i+1)+'_WUE_25_CF.txt'
-            e_data=np.loadtxt(name,delimiter=' ',dtype='float')
-            name=r'D:\2023 Fall\NS R1 Files\Inputs\Grid Factor\cases_REadv_'+repr(i+1)+'_WUE_25_WF.txt'
-            w_data=np.loadtxt(name,delimiter=' ',dtype='float')
+            
+            # name=r'\Users\stuti\Downloads\US-AI-Server-Analysis-main-2\Data\Grid Factor\cases_REadv_'+repr(i+1)+'_WUE_25_CF.txt'
+            # e_data=np.loadtxt(name,delimiter=' ',dtype='float')
+            # name=r'\Users\stuti\Downloads\US-AI-Server-Analysis-main-2\Data\Grid Factor\cases_REadv_'+repr(i+1)+'_WUE_25_WF.txt'
+            # w_data=np.loadtxt(name,delimiter=' ',dtype='float')
+
+            name = DATA_DIR / "Grid Factor" / f"cases_REadv_{i+1}_WUE_25_CF.txt"
+            e_data = np.loadtxt(name, delimiter=' ', dtype='float')
+            name = DATA_DIR / "Grid Factor" / f"cases_REadv_{i+1}_WUE_25_WF.txt"
+            w_data = np.loadtxt(name, delimiter=' ', dtype='float')
             emission_data=np.zeros([L_1,L_2])
             water_data=np.zeros([L_1,L_2])
             if i == 0:
@@ -123,7 +140,10 @@ for i in range (tem_sce_num):
             WaterUsage_D=np.zeros([L_1,L_2])
             CarbonEmission=np.zeros([L_1,L_2])
             flag=0
-            with open(r'D:\2023 Fall\NS R1 Files\Inputs\Best_WUE.csv', newline='') as csvfile:
+
+            #with open(r'\Users\stuti\Downloads\US-AI-Server-Analysis-main-2\Data\Best_WUE.csv', newline='') as csvfile:
+            with open(DATA_DIR / "Best_WUE.csv", newline='') as csvfile:
+
                 spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
                 for row in spamreader:
                     if flag ==0:
@@ -170,3 +190,26 @@ for i in range (tem_sce_num):
             print(sum(sum(PowerUsage))/7e6)
             print(sum(sum(WaterUsage))/7e6)
             print(sum(sum(CarbonEmission))/7e6)
+
+# ---------- Save annual best-water-scenario totals (2024–2030) ----------
+
+# Years corresponding to L_1 = 7
+years = [2024, 2025, 2026, 2027, 2028, 2029, 2030]
+
+# Average across the 5 temperature cases for each year
+avg_energy_TWh = PowerUsage_2.mean(axis=1)
+avg_water_Mm3 = WaterUsage_2.mean(axis=1)
+avg_carbon_MtCO2 = CarbonEmission_2.mean(axis=1)
+
+output_dir = ROOT / "Outputs"
+output_dir.mkdir(exist_ok=True)
+out_path = output_dir / "best_water_totals.csv"
+
+with out_path.open("w", newline="") as f:
+    writer = csv.writer(f)
+    writer.writerow(["year", "energy_TWh", "carbon_MtCO2", "water_Mm3"])
+    for year, e, c, w in zip(years, avg_energy_TWh, avg_carbon_MtCO2, avg_water_Mm3):
+        writer.writerow([int(year), float(e), float(c), float(w)])
+
+print(f"Best-water scenario annual totals saved to {out_path}")
+
